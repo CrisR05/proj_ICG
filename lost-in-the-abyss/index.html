@@ -106,6 +106,33 @@
         Aproxime-se dos cristais para coletar<br>
         Portal abre com todos os cristais
     </div>
+    <!-- Menu Principal -->
+<div id="main-menu" class="menu-overlay active">
+    <div class="menu-container">
+        <h1>ABYSS</h1>
+        <div class="menu-buttons">
+            <button id="new-game-btn">NEW GAME</button>
+            <button id="options-btn">OPTIONS</button>
+        </div>
+        <div id="level-select" style="display: none;">
+            <p>NUMBER OF LEVELS (MAX 20)</p>
+            <input type="number" id="level-count" min="1" max="20" value="10">
+            <button id="confirm-levels">START DESCENT</button>
+            <button id="cancel-levels">BACK</button>
+        </div>
+    </div>
+</div>
+
+<!-- Menu de Pausa -->
+<div id="pause-menu" class="menu-overlay" style="display: none;">
+    <div class="menu-container">
+        <h2>PAUSED</h2>
+        <div class="menu-buttons">
+            <button id="resume-btn">RESUME</button>
+            <button id="quit-to-menu-btn">QUIT TO MENU</button>
+        </div>
+    </div>
+</div>
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>

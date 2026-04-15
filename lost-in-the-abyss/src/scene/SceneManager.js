@@ -19,20 +19,18 @@ export class SceneManager {
         document.body.appendChild(this.renderer.domElement);
         
         // Luz Ambiente base (será ajustada por tema)
-        this.ambientLight = new THREE.AmbientLight(0x404060, 0.08);
-        this.scene.add(this.ambientLight);
+this.ambientLight = new THREE.AmbientLight(0x404060, 0.2);        this.scene.add(this.ambientLight);
         
         // Evento de redimensionamento
         window.addEventListener('resize', () => this.onResize());
     }
     
     applyTheme(theme) {
-        this.scene.background = new THREE.Color(theme.fogColor);
-        this.scene.fog = new THREE.FogExp2(theme.fogColor, theme.fogDensity);
-        this.ambientLight.color.setHex(theme.ambientColor);
-        this.ambientLight.intensity = 0.4;
-    }
-    
+    this.scene.background = new THREE.Color(theme.fogColor);
+    // Nevoeiro que muda com o tempo (ligeira pulsação)
+    this.scene.fog = new THREE.FogExp2(theme.fogColor, theme.fogDensity);
+    // Opcional: adicionar um segundo plano de nevoeiro com animação
+}
     render() {
         this.renderer.render(this.scene, this.camera);
     }
