@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Lost in the Abyss</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            cursor: crosshair;
+        }
+        #ui-container {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            color: #fff;
+            font-size: 24px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            z-index: 100;
+            pointer-events: none;
+        }
+        #energy-bar {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #energy-fill {
+            width: 200px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #energy-fill-inner {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffaa00, #ffdd44);
+            transition: width 0.1s;
+        }
+        #crystal-counter {
+            margin-bottom: 10px;
+        }
+        #level-indicator {
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 48px;
+            text-shadow: 0 0 20px rgba(0,0,0,0.9);
+            z-index: 200;
+            pointer-events: none;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4px;
+            height: 4px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+            z-index: 50;
+            pointer-events: none;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+            text-align: right;
+            z-index: 100;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-container">
+        <div id="level-indicator">🗺️ NÍVEL 1 - MASMORRA DE PEDRA</div>
+        <div id="crystal-counter">💎 CRISTAIS: 0/4</div>
+        <div id="energy-bar">
+            <span>🔋</span>
+            <div id="energy-fill">
+                <div id="energy-fill-inner" style="width: 100%"></div>
+            </div>
+            <span id="energy-text">100%</span>
+        </div>
+    </div>
+    <div id="crosshair"></div>
+    <div id="message"></div>
+    <div id="instructions">
+        WASD: Mover | RATO: Olhar | CLIQUE: Iniciar<br>
+        Aproxime-se dos cristais para coletar<br>
+        Portal abre com todos os cristais
+    </div>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
