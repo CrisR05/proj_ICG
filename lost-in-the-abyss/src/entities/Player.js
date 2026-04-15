@@ -9,28 +9,28 @@ export class Player {
         this.velocity = new THREE.Vector3();
         this.speed = GAME_CONFIG.PLAYER_SPEED;
         
-        // Ângulos para rotação com rato
         this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
         this.pitchSpeed = 0.002;
         this.yawSpeed = 0.002;
         this.maxPitch = Math.PI / 2.2;
         
-        // Energia da lanterna
         this.energy = 1.0;
         this.drainRate = GAME_CONFIG.BASE_ENERGY_DRAIN;
         
-        // ========== LANTERNA FUNCIONAL (adicionada à cena) ==========
-        this.flashlight = new THREE.SpotLight(0xffeedd, GAME_CONFIG.FLASHLIGHT_BASE_INTENSITY);
+        // ⭐ NOVAS PROPRIEDADES PARA A INTENSIDADE PROGRESSIVA
+        this.baseIntensity = GAME_CONFIG.FLASHLIGHT_BASE_INTENSITY;
+        this.intensityMultiplier = 1.0;
+        
+        // Lanterna (adicionada à cena)
+        this.flashlight = new THREE.SpotLight(0xffeedd, this.baseIntensity);
         this.flashlight.angle = Math.PI / 5;
         this.flashlight.penumbra = 0.5;
         this.flashlight.decay = 1;
         this.flashlight.distance = GAME_CONFIG.FLASHLIGHT_BASE_DISTANCE;
         this.flashlight.castShadow = true;
-        
-        // Adiciona a luz à cena (NÃO à câmara!)
         this.scene.add(this.flashlight);
         
-        // Objecto auxiliar para servir de alvo (também na cena)
+        // Alvo da luz
         this.flightlightTarget = new THREE.Object3D();
         this.scene.add(this.flightlightTarget);
         this.flashlight.target = this.flightlightTarget;
@@ -60,10 +60,14 @@ export class Player {
     }
     
     update(deltaTime, keys, collisionCheck) {
-        // 1. Drenagem de energia e intensidade da luz
+        // 1. Drenagem de energia e cálculo da intensidade base
         if (this.energy > 0) {
             this.energy = Math.max(0, this.energy - this.drainRate * deltaTime);
-            let intensity = 0.5 + (GAME_CONFIG.FLASHLIGHT_BASE_INTENSITY - 0.5) * this.energy;
+            let intensity = 0.5 + (this.baseIntensity - 0.5) * this.energy;
+            
+            // ⭐ APLICA O MULTIPLICADOR (cada cristal aumenta)
+            intensity *= this.intensityMultiplier;
+            
             if (this.energy < 0.2) {
                 intensity *= 0.8 + 0.4 * Math.sin(Date.now() * 0.02);
             }
@@ -99,18 +103,22 @@ export class Player {
         this.camera.position.copy(this.position);
         
         // 3. Actualização da posição da lanterna e do alvo
-        // Posição da luz: ligeiramente ao lado e abaixo da câmara (efeito "lanterna na mão")
         const offset = new THREE.Vector3(0.4, -0.3, -0.4);
         const lightPos = this.position.clone().add(offset.clone().applyQuaternion(this.camera.quaternion));
         this.flashlight.position.copy(lightPos);
         
-        // Alvo: 15 unidades à frente da câmara, na direcção para onde o jogador olha
         const targetDir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
         const targetPos = this.position.clone().add(targetDir.multiplyScalar(15));
         this.flightlightTarget.position.copy(targetPos);
     }
     
-    recharge(amount) {
+    // ⭐ MÉTODO RECHARGE MODIFICADO: aceita "isCrystal" para aumentar multiplicador
+    recharge(amount, isCrystal = false) {
         this.energy = Math.min(1.0, this.energy + amount);
+        if (isCrystal) {
+            this.intensityMultiplier += 0.1;        // +10% por cristal
+            this.intensityMultiplier = Math.min(3.0, this.intensityMultiplier); // máximo 3x
+            console.log(`💪 Intensidade da lanterna: ${(this.intensityMultiplier * 100).toFixed(0)}%`);
+        }
     }
 }
