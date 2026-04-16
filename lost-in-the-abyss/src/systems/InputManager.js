@@ -4,7 +4,6 @@ export class InputManager {
         
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-            // Previne scroll com setas
             if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'].includes(e.code)) {
                 e.preventDefault();
             }

@@ -146,7 +146,7 @@ export class Dungeon {
             this.group.add(crystal.mesh);
             this.crystals.push(crystal);
         }
-        console.log(`✨ Cristais colocados: ${this.crystals.length}`);
+        console.log(`Cristais colocados: ${this.crystals.length}`);
         
         // ===== PORTAL =====
         const wallAdjacentCells = [];
@@ -190,26 +190,24 @@ export class Dungeon {
         
         if (bestPortalCell) {
             this.portal = new Portal(theme.portalColor);
-            // ⭐ ALTURA CORRIGIDA: 1.6 (metade da altura 3.2) para a base tocar o chão
             this.portal.mesh.position.set(bestPortalCell.x, 1.6, bestPortalCell.z);
             const angle = getPortalRotation(map, bestPortalCell.row, bestPortalCell.col);
             this.portal.setOrientation(angle);
             this.group.add(this.portal.mesh);
-            console.log(`🚪 Portal colocado com rotação ${angle}`);
+            console.log(`Portal colocado com rotação ${angle}`);
         } else if (farthestPos) {
             this.portal = new Portal(theme.portalColor);
             this.portal.mesh.position.copy(farthestPos);
-            this.portal.mesh.position.y = 1.6; // ⭐ CORRIGIDO
+            this.portal.mesh.position.y = 1.6;
             this.group.add(this.portal.mesh);
         } else if (floorCells.length > 0) {
             const fallbackPos = floorCells[floorCells.length-1].pos;
             this.portal = new Portal(theme.portalColor);
             this.portal.mesh.position.copy(fallbackPos);
-            this.portal.mesh.position.y = 1.6; // ⭐ CORRIGIDO
+            this.portal.mesh.position.y = 1.6;
             this.group.add(this.portal.mesh);
         }
         
-        // ===== PARTÍCULAS DE POEIRA (AMBIENTE) =====
         const particleCount = 400;
         const particleGeometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
@@ -233,10 +231,9 @@ export class Dungeon {
         this.particleSystem.userData = { rotationSpeed: 0.001 };
         
         this.startPosition = new THREE.Vector3(0, GAME_CONFIG.PLAYER_HEIGHT, 0);
-        console.log(`🗺️ Dungeon gerada: ${size}x${size}, ${this.walls.length} paredes, ${this.crystals.length} cristais`);
+        console.log(`Dungeon gerada: ${size}x${size}, ${this.walls.length} paredes, ${this.crystals.length} cristais`);
     }
     
-    // Caminho para o portal (linha verde)
     calculatePathToPortal(currentPosition) {
         if (!this.portal) return null;
         const start = currentPosition.clone();
@@ -426,6 +423,37 @@ export class Dungeon {
         }
         return { floorMaterial, wallMaterial };
     }
+   clear() {
+    // Limpa o grupo principal
+    while (this.group.children.length > 0) {
+        const child = this.group.children[0];
+        this.group.remove(child);
+        if (child.isMesh) {
+            child.material.dispose();
+            child.geometry.dispose();
+        }
+    }
+    while (this.pathGroup.children.length > 0) {
+        const child = this.pathGroup.children[0];
+        this.pathGroup.remove(child);
+        if (child.isMesh) {
+            child.material.dispose();
+            child.geometry.dispose();
+        }
+    }
+    while (this.greenPathGroup.children.length > 0) {
+        const child = this.greenPathGroup.children[0];
+        this.greenPathGroup.remove(child);
+        if (child.isMesh) {
+            child.material.dispose();
+            child.geometry.dispose();
+        }
+    }
+    this.walls = [];
+    this.crystals = [];
+    this.portal = null;
+    this.particleSystem = null;
+}
     
     getStartPosition() { return this.startPosition; }
     getWalls() { return this.walls; }

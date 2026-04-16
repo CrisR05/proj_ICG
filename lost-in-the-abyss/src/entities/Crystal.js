@@ -7,7 +7,6 @@ export class Crystal {
         this.collected = false;
         this.floatOffset = Math.random() * Math.PI * 2;
         
-        // Núcleo facetado (icosaedro) – mais parecido com cristal real
         const coreGeo = new THREE.IcosahedronGeometry(size, 0);
         const coreMat = new THREE.MeshStandardMaterial({
             color: color,
@@ -37,11 +36,9 @@ export class Crystal {
         const outer = new THREE.Mesh(outerGeo, outerMat);
         this.mesh.add(outer);
         
-        // Luz pontual suave
         this.light = new THREE.PointLight(color, 0.8, 4);
         this.mesh.add(this.light);
         
-        // Partículas orbitando (pó de luz)
         const particleCount = 4;
         for (let i = 0; i < particleCount; i++) {
             const particleGeo = new THREE.SphereGeometry(0.04, 6, 6);

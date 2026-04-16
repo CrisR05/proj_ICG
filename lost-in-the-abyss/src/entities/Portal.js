@@ -16,30 +16,25 @@ export class Portal {
         });
         
         const width = 2.2;
-        const height = 3.2;    // altura total da porta
+        const height = 3.2;   
         const depth = 0.3;
         
-        // Ombreira esquerda (base em Y=0, centro em Y=height/2)
         const leftPillar = new THREE.Mesh(new THREE.BoxGeometry(0.4, height, depth), frameMaterial);
         leftPillar.position.set(-width/2, height/2, 0);
         this.mesh.add(leftPillar);
         
-        // Ombreira direita
         const rightPillar = new THREE.Mesh(new THREE.BoxGeometry(0.4, height, depth), frameMaterial);
         rightPillar.position.set(width/2, height/2, 0);
         this.mesh.add(rightPillar);
         
-        // Verga (parte superior)
         const lintel = new THREE.Mesh(new THREE.BoxGeometry(width + 0.4, 0.4, depth), frameMaterial);
         lintel.position.set(0, height, 0);
         this.mesh.add(lintel);
         
-        // Soleira (parte inferior, no chão)
         const threshold = new THREE.Mesh(new THREE.BoxGeometry(width + 0.2, 0.2, depth), frameMaterial);
         threshold.position.set(0, 0.1, 0);
         this.mesh.add(threshold);
         
-        // ===== PORTAL MÁGICO =====
         const portalGeo = new THREE.CylinderGeometry(1.4, 1.4, 0.1, 32);
         const portalMat = new THREE.MeshStandardMaterial({
             color: color,
@@ -54,7 +49,6 @@ export class Portal {
         this.portalDisc.position.set(0, height/2, 0.05);
         this.mesh.add(this.portalDisc);
         
-        // Anel exterior
         const ringGeo = new THREE.TorusGeometry(1.5, 0.08, 32, 64);
         const ringMat = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.8 });
         this.ring = new THREE.Mesh(ringGeo, ringMat);
@@ -62,7 +56,6 @@ export class Portal {
         this.ring.position.set(0, height/2, 0.1);
         this.mesh.add(this.ring);
         
-        // Partículas interiores
         this.particles = [];
         for (let i = 0; i < 20; i++) {
             const particleGeo = new THREE.SphereGeometry(0.05, 6, 6);
@@ -97,7 +90,6 @@ export class Portal {
         this.glow.position.set(0, height/2, 0);
         this.mesh.add(this.glow);
         
-        // ⭐ BOTÃO INDICADOR (acima da verga, ao nível dos olhos)
         this.indicatorLight = new THREE.Mesh(
             new THREE.SphereGeometry(0.22, 16, 16),
             new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x441111, emissiveIntensity: 0.8 })

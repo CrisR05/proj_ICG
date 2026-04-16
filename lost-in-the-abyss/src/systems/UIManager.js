@@ -20,7 +20,6 @@ export class UIManager {
 
         this.createMenuElements();
         
-        // Inicialmente esconde a UI do jogo
         this.hideGameUI();
     }
 
@@ -38,28 +37,35 @@ export class UIManager {
         mainMenu.innerHTML = `
             <div class="menu-container">
                 <h1 class="game-title">ABYSS</h1>
+                <div class="game-subtitle">LOST IN THE DARKNESS</div>
                 <div class="menu-buttons">
-                    <button id="new-game-btn" class="menu-btn">NEW GAME</button>
-                    <button id="controls-btn" class="menu-btn">CONTROLS</button>
-                    <button id="exit-game-btn" class="menu-btn">EXIT</button>
+                    <button id="new-game-btn" class="menu-btn">▶ NEW GAME</button>
+                    <button id="controls-btn" class="menu-btn">⌨ CONTROLS</button>
+                    <button id="exit-game-btn" class="menu-btn">✖ EXIT</button>
                 </div>
                 <div id="level-select-panel" style="display: none;">
-                    <p class="menu-text">NUMBER OF LEVELS (MAX ${this.maxLevels})</p>
+                    <p class="menu-text">SELECT DEPTH</p>
                     <input type="number" id="level-count-input" min="1" max="${this.maxLevels}" value="10">
                     <div style="display: flex; gap: 20px; justify-content: center; margin-top: 20px;">
-                        <button id="confirm-levels-btn" class="menu-btn-small">START</button>
-                        <button id="cancel-levels-btn" class="menu-btn-small">BACK</button>
+                        <button id="confirm-levels-btn" class="menu-btn-small">✦ DESCEND ✦</button>
+                        <button id="cancel-levels-btn" class="menu-btn-small">↺ BACK</button>
                     </div>
                 </div>
                 <div id="controls-panel" style="display: none;">
-                    <p>W / A / S / D - Move</p>
-                    <p>MOUSE - Look around</p>
-                    <p>ESC - Pause menu</p>
+                    <p>W / A / S / D  →  Move</p>
+                    <p>MOUSE  →  Look around</p>
+                    <p>⎋ ESC  →  Pause menu</p>
                     <p>Click on game to lock cursor</p>
-                    <button id="back-to-menu-btn" class="menu-btn-small">BACK</button>
+                    <button id="back-to-menu-btn" class="menu-btn-small">← BACK</button>
                 </div>
             </div>
         `;
+        
+        mainMenu.style.backgroundImage = `linear-gradient(rgba(10, 10, 30, 0.7), rgba(5, 5, 20, 0.85)), url('/assets/textures/ui/menu_background.png')`;
+        mainMenu.style.backgroundSize = 'cover';
+        mainMenu.style.backgroundPosition = 'center';
+        mainMenu.style.backgroundRepeat = 'no-repeat';
+        
         document.body.appendChild(mainMenu);
         this.mainMenu = mainMenu;
 
@@ -81,116 +87,6 @@ export class UIManager {
         document.body.appendChild(pauseMenu);
         this.pauseMenu = pauseMenu;
 
-        // Estilos CSS
-        if (!document.getElementById('menu-styles')) {
-            const style = document.createElement('style');
-            style.id = 'menu-styles';
-            style.textContent = `
-                .menu-overlay {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.92);
-                    backdrop-filter: blur(4px);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 1000;
-                    font-family: 'Courier New', monospace;
-                }
-                .menu-container {
-                    text-align: center;
-                    background: rgba(10, 10, 15, 0.9);
-                    padding: 40px 60px;
-                    border: 2px solid #8b0000;
-                    border-radius: 8px;
-                    box-shadow: 0 0 30px rgba(139, 0, 0, 0.6);
-                    min-width: 350px;
-                }
-                .game-title {
-                    color: #8b0000;
-                    font-size: 48px;
-                    margin-bottom: 40px;
-                    text-shadow: 0 0 8px #ff0000;
-                    letter-spacing: 4px;
-                }
-                h2 {
-                    color: #cc0000;
-                    font-size: 36px;
-                    margin-bottom: 30px;
-                }
-                .menu-buttons {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 15px;
-                }
-                .menu-btn {
-                    background: #111;
-                    color: #cc0000;
-                    border: 2px solid #8b0000;
-                    padding: 12px 30px;
-                    font-size: 24px;
-                    font-family: 'Courier New', monospace;
-                    font-weight: bold;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    text-transform: uppercase;
-                }
-                .menu-btn:hover {
-                    background: #8b0000;
-                    color: #fff;
-                    border-color: #ff4444;
-                    box-shadow: 0 0 15px #ff0000;
-                }
-                .menu-btn-small {
-                    background: #1a1a1a;
-                    color: #cc0000;
-                    border: 1px solid #8b0000;
-                    padding: 8px 20px;
-                    font-size: 18px;
-                    cursor: pointer;
-                    font-family: 'Courier New', monospace;
-                }
-                .menu-btn-small:hover {
-                    background: #8b0000;
-                    color: white;
-                }
-                .menu-text {
-                    color: #ccc;
-                    font-size: 18px;
-                    margin: 15px 0;
-                }
-                #level-select-panel input {
-                    background: #222;
-                    border: 1px solid #8b0000;
-                    color: #fff;
-                    font-size: 20px;
-                    padding: 8px;
-                    width: 100px;
-                    text-align: center;
-                    font-family: monospace;
-                    margin: 10px auto;
-                }
-                #controls-panel {
-                    margin-top: 25px;
-                    color: #aaa;
-                    font-size: 16px;
-                    text-align: left;
-                    background: rgba(0,0,0,0.7);
-                    padding: 15px 25px;
-                    border: 1px solid #8b0000;
-                    border-radius: 4px;
-                }
-                .hidden {
-                    display: none !important;
-                }
-            `;
-            document.head.appendChild(style);
-        }
-
-        // Bind dos eventos
         this.bindButtons();
     }
 
@@ -257,7 +153,6 @@ export class UIManager {
         if (mainBtns) mainBtns.style.display = 'flex';
     }
 
-    // ===== MÉTODOS PARA CONTROLAR A UI DO JOGO =====
     showGameUI() {
         if (this.uiContainer) this.uiContainer.classList.remove('hidden');
     }
@@ -276,7 +171,7 @@ export class UIManager {
 
     hideMainMenu() {
         if (this.mainMenu) this.mainMenu.style.display = 'none';
-        this.showGameUI();  // Mostra a UI do jogo quando o menu principal desaparece
+        this.showGameUI();
     }
 
     showPauseMenu() {
@@ -294,7 +189,6 @@ export class UIManager {
         alert("Close the browser tab to exit the game.");
     }
 
-    // ================= UI do jogo =================
     updateLevel(level, themeName) {
         if (this.levelEl) this.levelEl.innerHTML = `🗺️ LEVEL ${level} - ${themeName.toUpperCase()}`;
     }
@@ -308,13 +202,12 @@ export class UIManager {
         if (this.energyFill) this.energyFill.style.width = `${percent}%`;
         if (this.energyText) this.energyText.textContent = `${percent}%`;
         
-        // Muda cor baseada na energia
         if (energy < 0.2) {
-            if (this.energyFill) this.energyFill.style.background = 'linear-gradient(90deg, #ff0000, #ff4444)';
+            if (this.energyFill) this.energyFill.style.background = 'linear-gradient(90deg, #ff4444, #ff8888)';
         } else if (energy < 0.5) {
-            if (this.energyFill) this.energyFill.style.background = 'linear-gradient(90deg, #ff8800, #ffaa00)';
+            if (this.energyFill) this.energyFill.style.background = 'linear-gradient(90deg, #ffaa44, #ffcc66)';
         } else {
-            if (this.energyFill) this.energyFill.style.background = 'linear-gradient(90deg, #ffaa00, #ffdd44)';
+            if (this.energyFill) this.energyFill.style.background = 'linear-gradient(90deg, #66ffaa, #aaffcc)';
         }
     }
 
