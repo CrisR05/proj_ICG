@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ABYSS - Lost in the Darkness</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
+            cursor: crosshair;
+            background-color: #0a0a1a;
+        }
+
+        #ui-container {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            color: #c8c8ff;
+            font-size: 14px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            pointer-events: none;
+            font-family: 'Poppins', sans-serif;
+            backdrop-filter: blur(5px);
+            background: rgba(20, 20, 50, 0.5);
+            padding: 12px 20px;
+            border-radius: 12px;
+            border-left: 4px solid #8866ff;
+        }
+
+        #energy-bar {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #energy-fill {
+            width: 180px;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(136, 102, 255, 0.5);
+        }
+
+        #energy-fill-inner {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #8866ff, #66ccff);
+            transition: width 0.1s ease;
+            border-radius: 20px;
+        }
+
+        #crystal-counter, #level-indicator {
+            font-weight: 500;
+            letter-spacing: 1px;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 42px;
+            font-weight: bold;
+            text-shadow: 0 0 30px rgba(136, 102, 255, 0.5);
+            z-index: 200;
+            pointer-events: none;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            font-family: 'Poppins', sans-serif;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #aa88ff, #66ccff, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4px;
+            height: 4px;
+            background: #8866ff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(136, 102, 255, 0.8);
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(200, 200, 255, 0.5);
+            font-size: 10px;
+            text-align: right;
+            z-index: 100;
+            pointer-events: none;
+            font-family: 'Poppins', sans-serif;
+            background: rgba(20, 20, 50, 0.4);
+            padding: 6px 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Animação de piscar para energia crítica */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .energy-critical {
+            animation: pulse 0.5s infinite;
+        }
+
+        .menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .menu-container {
+            text-align: center;
+            background: rgba(15, 15, 40, 0.65);
+            backdrop-filter: blur(16px);
+            padding: 45px 65px;
+            border-radius: 32px;
+            border: 1px solid rgba(136, 102, 255, 0.5);
+            box-shadow: 0 0 80px rgba(100, 50, 150, 0.4);
+            min-width: 420px;
+            animation: fadeInUp 0.8s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .game-title {
+            font-size: 68px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #aa88ff, #66ccff, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: 10px;
+            text-transform: uppercase;
+            filter: drop-shadow(0 0 30px rgba(136, 102, 255, 0.5));
+        }
+
+        .game-subtitle {
+            color: rgba(200, 200, 255, 0.6);
+            font-size: 11px;
+            letter-spacing: 6px;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .menu-btn {
+            background: linear-gradient(135deg, rgba(30, 30, 60, 0.9), rgba(20, 20, 50, 0.9));
+            color: #bb99ff;
+            border: 1px solid rgba(136, 102, 255, 0.6);
+            padding: 14px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            border-radius: 50px;
+            backdrop-filter: blur(4px);
+        }
+
+        .menu-btn:hover {
+            background: linear-gradient(135deg, #7755cc, #5533aa);
+            color: white;
+            border-color: #aa88ff;
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(119, 85, 204, 0.6);
+        }
+
+        .menu-btn-small {
+            background: transparent;
+            color: #aa99ff;
+            border: 1px solid rgba(136, 102, 255, 0.5);
+            padding: 8px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Poppins', sans-serif;
+            border-radius: 30px;
+            margin: 5px;
+        }
+
+        .menu-btn-small:hover {
+            background: rgba(119, 85, 204, 0.3);
+            color: #ddccff;
+            border-color: #aa88ff;
+        }
+
+        .menu-text {
+            color: #aaaaff;
+            font-size: 14px;
+            margin: 20px 0 10px;
+            letter-spacing: 2px;
+        }
+
+        #level-select-panel {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(136, 102, 255, 0.3);
+        }
+
+        #level-select-panel input {
+            background: rgba(10, 10, 35, 0.8);
+            border: 1px solid #8866ff;
+            color: #ccddff;
+            font-size: 24px;
+            padding: 10px;
+            width: 120px;
+            text-align: center;
+            font-family: 'Poppins', monospace;
+            margin: 15px auto;
+            border-radius: 16px;
+        }
+
+        #controls-panel {
+            margin-top: 30px;
+            color: #aaaaff;
+            font-size: 13px;
+            text-align: left;
+            background: rgba(10, 10, 35, 0.6);
+            padding: 20px 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(136, 102, 255, 0.3);
+        }
+
+        #controls-panel p {
+            margin: 10px 0;
+            font-family: monospace;
+        }
+
+        h2 {
+            font-size: 34px;
+            color: #bb99ff;
+            margin-bottom: 30px;
+            letter-spacing: 5px;
+        }
+
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(136, 102, 255, 0.6), rgba(102, 204, 255, 0));
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+            animation: floatParticle linear infinite;
+        }
+
+        @keyframes floatParticle {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.6;
+            }
+            90% {
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateY(-20vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+  <script type="module" crossorigin src="/proj_ICG/assets/index-BoBcng-5.js"></script>
+  <link rel="stylesheet" crossorigin href="/proj_ICG/assets/index-1CjtiPjf.css">
+</head>
+<body>
+    <div id="ui-container">
+        <div id="level-indicator">LEVEL 1 - ABYSS</div>
+        <div id="crystal-counter">CRYSTALS: 0/0</div>
+        <div id="energy-bar">
+            <span>ENERGY</span>
+            <div id="energy-fill"><div id="energy-fill-inner"></div></div>
+            <span id="energy-text">100%</span>
+        </div>
+    </div>
+    <div id="message"></div>
+    <div id="crosshair"></div>
+    <div id="instructions">
+         WASD to move |  MOUSE to look | ⎋ ESC to pause
+    </div>
+
+    
+    <script>
+        function createParticles() {
+            const particleCount = 40;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                const size = Math.random() * 3 + 2;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDuration = Math.random() * 8 + 5 + 's';
+                particle.style.animationDelay = Math.random() * 10 + 's';
+                document.body.appendChild(particle);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+        });
+    </script>
+</body>
+</html>
