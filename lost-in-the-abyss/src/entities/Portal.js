@@ -7,7 +7,7 @@ export class Portal {
         this.isActive = false;
         this.rotationY = 0;
         
-        // ===== MOLDURA DE PEDRA =====
+        // MOLDURA DE PEDRA
         const frameMaterial = new THREE.MeshStandardMaterial({
             color: 0x886644,
             roughness: 0.6,

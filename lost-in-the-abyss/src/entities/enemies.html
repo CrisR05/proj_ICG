@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Three.js - Inimigos Evoluídos</title>
+    <style>
+        body { margin: 0; background-color: #050505; overflow: hidden; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; top: 20px; width: 100%; text-align: center;
+            color: #aaa; font-family: 'Orbitron', sans-serif; pointer-events: none;
+            text-transform: uppercase; letter-spacing: 3px; font-size: 12px;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="ui">Dungeon Golem | Forest Spirit | Moon Lurker</div>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- SETUP CENA ---
+        // --- SETUP CENA MELHORADA ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e); // Fundo mais claro/azulado para contraste
+        scene.fog = new THREE.Fog(0x1a1a2e, 5, 30);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 4, 14);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping; // Melhor reprodução de cor
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // --- ILUMINAÇÃO REFORMULADA ---
+        // Luz Global (Céu e Chão) - Garante que nada fique 100% preto
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+        scene.add(hemiLight);
+
+        // Luz Direcional (Sol/Sombra)
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        sunLight.position.set(5, 10, 5);
+        sunLight.castShadow = true;
+        // Ajuste de qualidade da sombra
+        sunLight.shadow.mapSize.width = 1024;
+        sunLight.shadow.mapSize.height = 1024;
+        scene.add(sunLight);
+
+        // Luzes de realce para os emissivos
+        const golemLight = new THREE.PointLight(0xff4400, 20, 10);
+        golemLight.position.set(-5, 2, 2);
+        scene.add(golemLight);
+
+        const moonLight = new THREE.PointLight(0x00ffff, 15, 10);
+        moonLight.position.set(5, 2, 2);
+        scene.add(moonLight);
+
+        // --- CHÃO PARA RECEBER SOMBRAS ---
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- GERADOR DE TEXTURA RÚSTICA (NOISE) ---
+        function createNoiseTexture(color1, color2) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            for(let i=0; i<1000; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? color1 : color2;
+                ctx.fillRect(Math.random()*256, Math.random()*256, 4, 4);
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        const stoneTex = createNoiseTexture('#333', '#444');
+        const mossTex = createNoiseTexture('#1a2e1a', '#2d5a27');
+        const moonTex = createNoiseTexture('#999', '#bbb');
+
+        // --- LUZES ---
+        const mainLight = new THREE.DirectionalLight(0xffffff, 2);
+        mainLight.position.set(5, 10, 5);
+        mainLight.castShadow = true;
+        scene.add(mainLight);
+
+        const fillLight = new THREE.PointLight(0xff0000, 10, 8); // Brilho do Golem
+        fillLight.position.set(-5, 2, 2);
+        scene.add(fillLight);
+
+        // --- 1. STONE GOLEM (MELHORADO) ---
+        // --- 1. DUNGEON GOLEM (ULTRA DETALHADO) ---
+class StoneGolem extends THREE.Group {
+    constructor() {
+        super();
+        
+        // Materiais
+        const rockMat = new THREE.MeshStandardMaterial({ 
+            map: stoneTex, 
+            roughness: 0.9, 
+            metalness: 0.1,
+            flatShading: true // Dá o look Low-Poly facetado
+        });
+        
+        const lavaMat = new THREE.MeshStandardMaterial({ 
+            color: 0xff4400, 
+            emissive: 0xff2200, 
+            emissiveIntensity: 8,
+            toneMapped: false 
+        });
+
+        // Função auxiliar para criar pedaços de rocha
+        const createRockSegment = (scale, pos) => {
+            const geo = new THREE.IcosahedronGeometry(0.5, 0); // Low poly rock
+            const mesh = new THREE.Mesh(geo, rockMat);
+            mesh.scale.set(scale.x, scale.y, scale.z);
+            mesh.position.set(pos.x, pos.y, pos.z);
+            mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            mesh.castShadow = true;
+            return mesh;
+        };
+
+        // --- CORPO (Segmentado para mostrar "lava" entre as pedras) ---
+        this.body = new THREE.Group();
+        
+        // Peito (Várias rochas agrupadas)
+        const chestL = createRockSegment({x:1.8, y:1.2, z:1.5}, {x:-0.4, y:1.8, z:0});
+        const chestR = createRockSegment({x:1.8, y:1.2, z:1.5}, {x:0.4, y:1.8, z:0});
+        
+        // Abdômen (Núcleo de lava visível)
+        const coreLava = new THREE.Mesh(new THREE.OctahedronGeometry(0.6, 0), lavaMat);
+        coreLava.position.y = 1.2;
+        
+        this.body.add(chestL, chestR, coreLava);
+        this.add(this.body);
+
+        // --- CABEÇA ---
+        this.head = createRockSegment({x:0.8, y:0.8, z:0.8}, {x:0, y:2.5, z:0.2});
+        const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.1), lavaMat);
+        eyeL.position.set(-0.2, 2.6, 0.6);
+        const eyeR = eyeL.clone();
+        eyeR.position.x = 0.2;
+        this.add(this.head, eyeL, eyeR);
+
+        // --- BRAÇOS (Enormes e pesados) ---
+        this.lArm = new THREE.Group();
+        const lShoulder = createRockSegment({x:1.2, y:1.2, z:1.2}, {x:-1.5, y:2, z:0});
+        const lForearm = createRockSegment({x:1, y:1.8, z:1}, {x:-1.8, y:0.8, z:0.2});
+        this.lArm.add(lShoulder, lForearm);
+        
+        this.rArm = new THREE.Group();
+        const rShoulder = createRockSegment({x:1.2, y:1.2, z:1.2}, {x:1.5, y:2, z:0});
+        const rForearm = createRockSegment({x:1, y:1.8, z:1}, {x:1.8, y:0.8, z:0.2});
+        this.rArm.add(rShoulder, rForearm);
+
+        this.add(this.lArm, this.rArm);
+
+        // --- PERNAS (Curtas e estáveis) ---
+        const lLeg = createRockSegment({x:1, y:1, z:1}, {x:-0.6, y:0.4, z:0});
+        const rLeg = createRockSegment({x:1, y:1, z:1}, {x:0.6, y:0.4, z:0});
+        this.add(lLeg, rLeg);
+
+        // Luz pontual interna para o magma brilhar no chão
+        this.lavaLight = new THREE.PointLight(0xff4400, 15, 4);
+        this.lavaLight.position.set(0, 1.2, 0.5);
+        this.add(this.lavaLight);
+    }
+
+    update(t) {
+        // Animação de "Respiração" pesada
+        const breathe = Math.sin(t * 1.5);
+        this.body.scale.set(1 + breathe * 0.03, 1 + breathe * 0.03, 1 + breathe * 0.03);
+        
+        // Braços balançando levemente como se fossem pesados
+        this.lArm.rotation.z = Math.sin(t * 0.5) * 0.1;
+        this.rArm.rotation.z = -Math.sin(t * 0.5) * 0.1;
+        this.lArm.rotation.x = Math.cos(t * 0.5) * 0.1;
+
+        // Pulsação da luz de lava
+        this.lavaLight.intensity = 10 + Math.sin(t * 4) * 5;
+    }
+}
+
+   // --- 2. FOREST SPIRIT (SINISTRO / DARK WOODS) ---
+class ForestSpirit extends THREE.Group {
+    constructor() {
+        super();
+        
+        // Materiais
+        const barkMat = new THREE.MeshStandardMaterial({ 
+            map: mossTex, 
+            color: 0x1a1a1a, // Madeira quase preta
+            roughness: 1,
+            flatShading: true 
+        });
+        
+        const spiritGlowMat = new THREE.MeshStandardMaterial({ 
+            color: 0x00ffaa, 
+            emissive: 0x00ffaa, 
+            emissiveIntensity: 3,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        // --- CORPO (Tronco de raízes retorcidas) ---
+        this.core = new THREE.Group();
+        const rootCount = 5;
+        for(let i = 0; i < rootCount; i++) {
+            const root = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.1, 0.4, 2.2, 4),
+                barkMat
+            );
+            const angle = (i / rootCount) * Math.PI * 2;
+            root.position.set(Math.cos(angle) * 0.3, 1.1, Math.sin(angle) * 0.3);
+            root.rotation.set(0.2, angle, 0.1);
+            this.core.add(root);
+        }
+        this.add(this.core);
+
+        // --- CABEÇA (Máscara de Madeira Quebrada) ---
+        this.headGroup = new THREE.Group();
+        const mask = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), barkMat);
+        mask.scale.set(1, 1.3, 0.8);
+        mask.position.y = 2.4;
+        
+        // Chifres de Galhos (Sinistro)
+        const createBranch = (side) => {
+            const branch = new THREE.Group();
+            const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), barkMat);
+            b1.position.y = 0.4;
+            b1.rotation.z = side * 0.5;
+            const b2 = b1.clone();
+            b2.position.set(side * 0.3, 0.9, 0);
+            b2.rotation.z = side * 0.8;
+            b2.scale.set(0.8, 0.8, 0.8);
+            branch.add(b1, b2);
+            return branch;
+        };
+
+        const leftHorn = createBranch(-1);
+        leftHorn.position.set(-0.3, 2.7, 0);
+        const rightHorn = createBranch(1);
+        rightHorn.position.set(0.3, 2.7, 0);
+
+        // Olhos de Luz Fria
+        const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
+        const eyeL = new THREE.Mesh(eyeGeo, new THREE.MeshBasicMaterial({color: 0xffffff}));
+        eyeL.position.set(-0.2, 2.5, 0.4);
+        const eyeR = eyeL.clone();
+        eyeR.position.x = 0.2;
+
+        this.headGroup.add(mask, leftHorn, rightHorn, eyeL, eyeR);
+        this.add(this.headGroup);
+
+        // --- BRAÇOS (Garras longas de madeira) ---
+        const armGeo = new THREE.CylinderGeometry(0.05, 0.1, 1.5, 4);
+        this.lArm = new THREE.Mesh(armGeo, barkMat);
+        this.lArm.position.set(-0.8, 1.8, 0);
+        this.lArm.rotation.z = 0.8;
+        
+        this.rArm = new THREE.Mesh(armGeo, barkMat);
+        this.rArm.position.set(0.8, 1.8, 0);
+        this.rArm.rotation.z = -0.8;
+        
+        this.add(this.lArm, this.rArm);
+
+        // --- ESPOROS TÓXICOS (Substituindo pirilampos) ---
+        this.spores = new THREE.Group();
+        for(let i = 0; i < 20; i++) {
+            const spore = new THREE.Mesh(
+                new THREE.SphereGeometry(0.02, 4, 4),
+                new THREE.MeshBasicMaterial({ color: 0x00ff88 })
+            );
+            spore.position.set(
+                (Math.random() - 0.5) * 2,
+                Math.random() * 3,
+                (Math.random() - 0.5) * 2
+            );
+            this.spores.add(spore);
+        }
+        this.add(this.spores);
+    }
+
+    update(t) {
+        // Flutuação fantasmagórica lenta
+        this.position.y = 0.4 + Math.sin(t * 0.8) * 0.2;
+        
+        // Cabeça inclina levemente observando o jogador
+        this.headGroup.rotation.y = Math.sin(t * 0.5) * 0.2;
+        this.headGroup.rotation.z = Math.sin(t * 0.3) * 0.1;
+
+        // Braços balançam como galhos ao vento
+        this.lArm.rotation.x = Math.sin(t) * 0.2;
+        this.rArm.rotation.x = Math.cos(t) * 0.2;
+
+        // Esporos descem e sobem
+        this.spores.children.forEach((s, i) => {
+            s.position.y += Math.sin(t + i) * 0.005;
+            s.position.x += Math.cos(t * 0.5 + i) * 0.002;
+        });
+    }
+}
+// --- 3. MOON XENOMORPH (TEXTURED & BIO-LUMINESCENT) ---
+class MoonLurker extends THREE.Group {
+    constructor() {
+        super();
+
+        // Gerar textura de pele alienígena (manchas e veias)
+        const createAlienSkin = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            // Base pálida
+            ctx.fillStyle = '#d2d2d2';
+            ctx.fillRect(0, 0, 512, 512);
+            // Manchas orgânicas purpúreas/cinzas
+            for(let i=0; i<200; i++) {
+                ctx.fillStyle = `rgba(100, 80, 120, ${Math.random() * 0.2})`;
+                ctx.beginPath();
+                ctx.arc(Math.random()*512, Math.random()*512, Math.random()*40, 0, Math.PI*2);
+                ctx.fill();
+            }
+            // Veias finas
+            ctx.strokeStyle = 'rgba(50, 100, 120, 0.1)';
+            for(let i=0; i<20; i++) {
+                ctx.beginPath();
+                ctx.moveTo(Math.random()*512, 0);
+                ctx.lineTo(Math.random()*512, 512);
+                ctx.stroke();
+            }
+            return new THREE.CanvasTexture(canvas);
+        };
+
+        const alienTex = createAlienSkin();
+
+        const skinMat = new THREE.MeshStandardMaterial({ 
+            map: alienTex,
+            color: 0xffffff,
+            roughness: 0.1, // Pele "molhada"
+            metalness: 0.2,
+            emissive: 0x112233, // Leve brilho azulado nas sombras
+        });
+        
+        const glowMat = new THREE.MeshStandardMaterial({ 
+            color: 0x00ffff, 
+            emissive: 0x00ffff, 
+            emissiveIntensity: 8
+        });
+
+        // --- TORSO (Com luz interna) ---
+        this.torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 1, 4, 12), skinMat);
+        this.torso.position.y = 1.6;
+        this.torso.rotation.x = 0.3;
+        this.add(this.torso);
+
+        // --- CABEÇA (Placa óssea mais escura) ---
+        const headMat = skinMat.clone();
+        headMat.color.set(0xaaaaaa); // Cabeça ligeiramente mais escura/dura
+
+        this.headGroup = new THREE.Group();
+        const headBase = new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 0.9, 4, 12), headMat);
+        headBase.rotation.x = Math.PI / 1.8;
+        headBase.position.set(0, 2.4, 0.4);
+        
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.03, 0.1), glowMat);
+        visor.position.set(0, 2.35, 0.75);
+        
+        this.headGroup.add(headBase, visor);
+        this.add(this.headGroup);
+
+        // --- BRAÇOS CONECTADOS ---
+        const createArm = (side) => {
+            const armRoot = new THREE.Group();
+            const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), headMat);
+            armRoot.add(shoulder);
+
+            const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.8), skinMat);
+            upperArm.position.y = -0.4;
+            upperArm.rotation.z = side * 0.2;
+            armRoot.add(upperArm);
+
+            const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.04, 1), skinMat);
+            forearm.position.set(side * 0.12, -1.2, 0.3);
+            forearm.rotation.x = -0.5;
+            armRoot.add(forearm);
+            
+            const claw = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.4, 0.04), glowMat);
+            claw.position.y = -0.5;
+            forearm.add(claw);
+            
+            return armRoot;
+        };
+
+        this.lArm = createArm(-1);
+        this.lArm.position.set(-0.35, 2.1, 0.1); 
+        this.rArm = createArm(1);
+        this.rArm.position.set(0.35, 2.1, 0.1);
+        this.add(this.lArm, this.rArm);
+
+        // --- PERNAS ---
+        const createLeg = (side) => {
+            const leg = new THREE.Group();
+            const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.1, 1), skinMat);
+            thigh.position.set(side * 0.25, 1.2, -0.1);
+            thigh.rotation.x = 0.2;
+            
+            const calf = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.05, 1.2), skinMat);
+            calf.position.set(0, -1, -0.2);
+            calf.rotation.x = -0.4;
+            thigh.add(calf);
+            
+            return thigh;
+        };
+        this.add(createLeg(-1), createLeg(1));
+
+        // --- CAUDA ---
+        this.tail = new THREE.Group();
+        let lastSegment = this.tail;
+        for(let i=0; i<10; i++) {
+            const seg = new THREE.Mesh(new THREE.SphereGeometry(0.16 - (i*0.015), 6, 6), headMat);
+            seg.position.z = -0.22;
+            seg.position.y = -0.05;
+            lastSegment.add(seg);
+            lastSegment = seg;
+            if(i === 9) {
+                const tip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.6, 4), glowMat);
+                tip.rotation.x = -Math.PI / 2;
+                seg.add(tip);
+            }
+        }
+        this.tail.position.set(0, 1.0, -0.2);
+        this.add(this.tail);
+
+        // Luz de pulsação interna do corpo
+        this.bodyLight = new THREE.PointLight(0x00ffff, 0, 2);
+        this.bodyLight.position.set(0, 1.6, 0.2);
+        this.add(this.bodyLight);
+    }
+
+    update(t) {
+        this.position.y = Math.sin(t * 1.5) * 0.1;
+        
+        // Pulsação bioluminescente do peito
+        const pulse = (Math.sin(t * 2) + 1) / 2;
+        this.bodyLight.intensity = pulse * 15;
+        
+        // Movimentos nervosos
+        this.headGroup.rotation.y = Math.sin(t * 0.5) * 0.2;
+        this.headGroup.rotation.x = Math.sin(t * 3) * 0.04;
+
+        this.lArm.rotation.x = Math.sin(t) * 0.2;
+        this.rArm.rotation.x = Math.cos(t) * 0.2;
+
+        let seg = this.tail;
+        let count = 0;
+        while(seg.children.length > 0) {
+            seg.rotation.y = Math.sin(t * 2.5 + count * 0.4) * 0.15;
+            seg.rotation.x = Math.cos(t + count * 0.3) * 0.05;
+            seg = seg.children[0];
+            count++;
+        }
+    }
+}
+        // --- INSTANCIAÇÃO ---
+        const golem = new StoneGolem(); golem.position.x = -5; scene.add(golem);
+        const spirit = new ForestSpirit(); spirit.position.x = 0; scene.add(spirit);
+        const moon = new MoonLurker(); moon.position.x = 5; scene.add(moon);
+
+        // --- LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = performance.now() * 0.001;
+            golem.update(t);
+            spirit.update(t);
+            moon.update(t);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

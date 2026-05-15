@@ -7,6 +7,7 @@ import { DungeonMoon } from '../scene/DungeonMoon.js';
 import { InputManager } from '../systems/InputManager.js';
 import { CollisionSystem } from '../systems/Collision.js';
 import { UIManager } from '../systems/UIManager.js';
+import { CombatSystem } from '../systems/CombatSystem.js';
 import { GAME_CONFIG, generateThemes } from '../utils/constants.js';
 
 export class Game {
@@ -30,6 +31,7 @@ export class Game {
         this.input = new InputManager();
         this.collision = new CollisionSystem();
         this.ui = new UIManager();
+        this.combat = null; // Sistema de combate
 
         // Callbacks do UI
         this.ui.onStartGame = (numLevels) => this.startNewGame(numLevels);
@@ -50,6 +52,9 @@ export class Game {
                 }
             }
         });
+        
+        // Inicia o loop de animação
+        this.animate();
     }
     
     startNewGame(totalLevels) {
@@ -60,7 +65,6 @@ export class Game {
         this.state = 'PLAYING';
         this.initLevel();
         this.ui.hideMainMenu();
-        this.start();
     }
     
     clearScene() {
@@ -109,6 +113,11 @@ export class Game {
             this.sceneManager.scene.add(this.moonDungeon.pathGroup);
             this.sceneManager.scene.add(this.moonDungeon.greenPathGroup);
         }
+        
+        // Limpa inimigos do sistema de combate
+        if (this.combat) {
+            this.combat.clear();
+        }
     }
     
     initLevel() {
@@ -118,23 +127,23 @@ export class Game {
         const theme = this.themes[this.currentLevel - 1];
         this.sceneManager.applyTheme(theme);
         
-        // Alternância: Nível 1 = Lua, Nível 2 = Floresta, Nível 3 = Masmorra, repete
+        // Alternância: Nível 1 = Floresta, Nível 2 = Lua, Nível 3 = Masmorra, repete
         const levelType = (this.currentLevel - 1) % 3;
         
         if (levelType === 0) {
-            // LUA (primeiro nível)
-            console.log(`🌕 Level ${this.currentLevel}: MOON`);
-            if (!this.moonDungeon) {
-                this.moonDungeon = new DungeonMoon(this.sceneManager.scene);
-            }
-            this.dungeon = this.moonDungeon;
-        } else if (levelType === 1) {
-            // FLORESTA
+            // FLORESTA (primeiro nível)
             console.log(`🌲 Level ${this.currentLevel}: FOREST`);
             if (!this.forestDungeon) {
                 this.forestDungeon = new DungeonForest(this.sceneManager.scene);
             }
             this.dungeon = this.forestDungeon;
+        } else if (levelType === 1) {
+            // LUA
+            console.log(`🌕 Level ${this.currentLevel}: MOON`);
+            if (!this.moonDungeon) {
+                this.moonDungeon = new DungeonMoon(this.sceneManager.scene);
+            }
+            this.dungeon = this.moonDungeon;
         } else {
             // MASMORRA
             console.log(`🏰 Level ${this.currentLevel}: DUNGEON`);
@@ -146,9 +155,11 @@ export class Game {
         
         this.dungeon.generate(this.currentLevel, theme);
         
+        // Cria o jogador se não existir
         if (!this.player) {
             this.player = new Player(this.sceneManager.camera, this.sceneManager.scene);
         }
+        
         const startPos = this.dungeon.getStartPosition();
         this.player.setPosition(startPos.x, startPos.y, startPos.z);
         this.player.setFlashlightColor(theme.flashlightColor);
@@ -160,15 +171,155 @@ export class Game {
         this.crystalsCollected = 0;
         this.totalCrystals = theme.totalCrystals;
         
+        // Inicializa sistema de combate
+        if (!this.combat) {
+            this.combat = new CombatSystem(this.sceneManager.scene, this.player, this.ui);
+        }
+        
+        // Adiciona inimigos baseado no tipo de nível
+        this.spawnEnemiesForLevel(levelType);
+        
+        // Adiciona itens coletáveis específicos do nível
+        this.spawnCollectablesForLevel(levelType);
+        
         this.ui.updateLevel(this.currentLevel, theme.name);
         this.ui.updateCrystals(0, this.totalCrystals);
         this.ui.updateEnergy(1.0);
         this.ui.showMessage(`LEVEL ${this.currentLevel}`, 2000);
     }
     
-    start() {
-        this.timer.update();
-        this.animate();
+    spawnEnemiesForLevel(levelType) {
+        // Limpa inimigos anteriores
+        this.combat.clear();
+        
+        if (levelType === 2) { // Masmorra - Stone Golems
+            console.log("👹 Spawning Stone Golems...");
+            // Importa dinamicamente para evitar erros
+            import('../entities/StoneGolem.js').then(module => {
+                const StoneGolem = module.StoneGolem;
+                // Posições fixas para golems
+                const golemPositions = [
+                    { x: -8, z: -6 },
+                    { x: 7, z: -5 },
+                    { x: -4, z: 8 },
+                    { x: 5, z: 7 }
+                ];
+                golemPositions.forEach(pos => {
+                    const golem = new StoneGolem(pos.x, pos.z);
+                    this.sceneManager.scene.add(golem);
+                    this.combat.addEnemy(golem);
+                });
+                this.ui.showMessage("👹 Stone Golems detected! Find a pickaxe!", 3000);
+            }).catch(err => console.warn("StoneGolem not loaded yet", err));
+        } 
+        else if (levelType === 0) { // Floresta - Forest Spirits
+            console.log("🌿 Spawning Forest Spirits...");
+            import('../entities/ForestSpirit.js').then(module => {
+                const ForestSpirit = module.ForestSpirit;
+                const spiritPositions = [
+                    { x: -6, z: -5 },
+                    { x: 5, z: -4 },
+                    { x: -3, z: 7 },
+                    { x: 6, z: 6 }
+                ];
+                spiritPositions.forEach(pos => {
+                    const spirit = new ForestSpirit(pos.x, pos.z);
+                    this.sceneManager.scene.add(spirit);
+                    this.combat.addEnemy(spirit);
+                });
+                this.ui.showMessage("🌿 Forest Spirits nearby! Find purple mushrooms!", 3000);
+            }).catch(err => console.warn("ForestSpirit not loaded yet", err));
+        }
+        else if (levelType === 1) { // Lua - Moon Lurkers
+            console.log("👽 Spawning Moon Lurkers...");
+            import('../entities/MoonLurker.js').then(module => {
+                const MoonLurker = module.MoonLurker;
+                const lurkerPositions = [
+                    { x: -7, z: -4 },
+                    { x: 6, z: -6 },
+                    { x: -5, z: 8 },
+                    { x: 4, z: 5 }
+                ];
+                lurkerPositions.forEach(pos => {
+                    const lurker = new MoonLurker(pos.x, pos.z);
+                    this.sceneManager.scene.add(lurker);
+                    this.combat.addEnemy(lurker);
+                });
+                this.ui.showMessage("👽 Moon Lurkers detected! Find energy crystals!", 3000);
+            }).catch(err => console.warn("MoonLurker not loaded yet", err));
+        }
+    }
+    
+    spawnCollectablesForLevel(levelType) {
+        if (levelType === 2) { // Masmorra - Picareta
+            import('../entities/CollectableItem.js').then(module => {
+                const PickaxeItem = module.PickaxeItem;
+                const pickaxe = new PickaxeItem(3, 4);
+                this.sceneManager.scene.add(pickaxe);
+                
+                // Detecção de coleta
+                const checkPickaxe = setInterval(() => {
+                    if (this.player && pickaxe) {
+                        const dist = this.player.position.distanceTo(pickaxe.position);
+                        if (dist < 2.5) {
+                            this.combat.collectPickaxe(pickaxe.position);
+                            this.sceneManager.scene.remove(pickaxe);
+                            clearInterval(checkPickaxe);
+                        }
+                    }
+                }, 100);
+            }).catch(err => console.warn("PickaxeItem not loaded yet", err));
+        }
+        else if (levelType === 0) { // Floresta - Cogumelos Antídoto
+            import('../entities/CollectableItem.js').then(module => {
+                const AntidoteMushroom = module.AntidoteMushroom;
+                const mushroomPositions = [
+                    { x: -4, z: -3 }, { x: 3, z: -2 },
+                    { x: -2, z: 5 }, { x: 5, z: 4 },
+                    { x: -5, z: 2 }, { x: 2, z: -4 }
+                ];
+                mushroomPositions.forEach(pos => {
+                    const mushroom = new AntidoteMushroom(pos.x, pos.z);
+                    this.sceneManager.scene.add(mushroom);
+                    
+                    const checkMushroom = setInterval(() => {
+                        if (this.player && mushroom) {
+                            const dist = this.player.position.distanceTo(mushroom.position);
+                            if (dist < 2.0) {
+                                this.combat.collectAntidote(mushroom.position);
+                                this.sceneManager.scene.remove(mushroom);
+                                clearInterval(checkMushroom);
+                            }
+                        }
+                    }, 100);
+                });
+            }).catch(err => console.warn("AntidoteMushroom not loaded yet", err));
+        }
+        else if (levelType === 1) { // Lua - Cristais de Energia
+            import('../entities/CollectableItem.js').then(module => {
+                const EnergyCrystal = module.EnergyCrystal;
+                const crystalPositions = [
+                    { x: -5, z: -4 }, { x: 4, z: -3 },
+                    { x: -3, z: 6 }, { x: 6, z: 5 },
+                    { x: -6, z: 3 }, { x: 3, z: -5 }
+                ];
+                crystalPositions.forEach(pos => {
+                    const crystal = new EnergyCrystal(pos.x, pos.z);
+                    this.sceneManager.scene.add(crystal);
+                    
+                    const checkCrystal = setInterval(() => {
+                        if (this.player && crystal) {
+                            const dist = this.player.position.distanceTo(crystal.position);
+                            if (dist < 2.0) {
+                                this.combat.collectCrystal(crystal.position);
+                                this.sceneManager.scene.remove(crystal);
+                                clearInterval(checkCrystal);
+                            }
+                        }
+                    }, 100);
+                });
+            }).catch(err => console.warn("EnergyCrystal not loaded yet", err));
+        }
     }
     
     animate() {
@@ -176,7 +327,8 @@ export class Game {
         this.timer.update();
         const deltaTime = Math.min(this.timer.getDelta(), 0.1);
         
-        if (this.state === 'PLAYING') {
+        // Só processa lógica do jogo se estiver em PLAYING e todos os componentes existirem
+        if (this.state === 'PLAYING' && this.player && this.dungeon) {
             this.input.update();
             
             const collisionCheck = (delta) => {
@@ -190,32 +342,45 @@ export class Game {
             
             this.player.update(deltaTime, this.input.keys, collisionCheck);
             
+            // Atualiza direção do jogador para o sistema de combate
+            if (this.combat && this.player) {
+                this.combat.updatePlayerDirection(this.player.getDirection());
+                this.combat.update(deltaTime, this.input);
+            }
+            
+            // Atualiza inimigos
+            if (this.combat) {
+                this.combat.updateEnemies(deltaTime, this.player.position);
+            }
+            
             // Cristais
             const crystals = this.dungeon.getCrystals();
-            crystals.forEach(crystal => {
-                crystal.update(deltaTime);
-                if (!crystal.collected) {
-                    const dist = this.player.position.distanceTo(crystal.mesh.position);
-                    if (dist < GAME_CONFIG.CRYSTAL_COLLECT_DISTANCE) {
-                        crystal.collected = true;
-                        crystal.mesh.visible = false;
-                        this.crystalsCollected++;
-                        this.player.recharge(0.25, true);
-                        this.player.setFlashlightColor(crystal.color);
-                        this.ui.updateCrystals(this.crystalsCollected, this.totalCrystals);
-                        this.ui.showMessage(`CRYSTAL! +25% ENERGY`, 1000);
-                        if (this.crystalsCollected >= this.totalCrystals) {
-                            const portal = this.dungeon.getPortal();
-                            if (portal && portal.activate) {
-                                portal.activate();
-                            } else if (portal && portal.isActive !== undefined) {
-                                portal.isActive = true;
+            if (crystals) {
+                crystals.forEach(crystal => {
+                    if (crystal.update) crystal.update(deltaTime);
+                    if (!crystal.collected && this.player) {
+                        const dist = this.player.position.distanceTo(crystal.mesh.position);
+                        if (dist < GAME_CONFIG.CRYSTAL_COLLECT_DISTANCE) {
+                            crystal.collected = true;
+                            crystal.mesh.visible = false;
+                            this.crystalsCollected++;
+                            this.player.recharge(0.25, true);
+                            this.player.setFlashlightColor(crystal.color);
+                            this.ui.updateCrystals(this.crystalsCollected, this.totalCrystals);
+                            this.ui.showMessage(`CRYSTAL! +25% ENERGY`, 1000);
+                            if (this.crystalsCollected >= this.totalCrystals) {
+                                const portal = this.dungeon.getPortal();
+                                if (portal && portal.activate) {
+                                    portal.activate();
+                                } else if (portal && portal.isActive !== undefined) {
+                                    portal.isActive = true;
+                                }
+                                this.ui.showMessage(`PORTAL OPENED!`, 3000);
                             }
-                            this.ui.showMessage(`PORTAL OPENED!`, 3000);
                         }
                     }
-                }
-            });
+                });
+            }
             
             // Portal
             const portal = this.dungeon.getPortal();
@@ -223,7 +388,7 @@ export class Game {
                 if (portal.update) portal.update(deltaTime);
                 
                 const isActive = portal.isActive || (portal.mesh && portal.userData?.isActive);
-                if (isActive) {
+                if (isActive && this.player) {
                     const portalPos = portal.position || portal.mesh?.position;
                     if (portalPos) {
                         const dist = this.player.position.distanceTo(portalPos);
@@ -236,17 +401,24 @@ export class Game {
             
             this.ui.updateEnergy(this.player.energy);
             
+            // Verifica se todos os inimigos foram derrotados
+            if (this.combat && this.combat.getEnemyCount() === 0 && this.combat.hasSpawnedEnemies) {
+                this.ui.showMessage("✨ All enemies defeated! Find the crystals!", 2000);
+                this.combat.hasSpawnedEnemies = false;
+            }
+            
             if (this.player.energy <= 0) {
                 this.ui.showMessage(`LANTERN DIED...`, 0);
                 this.state = 'GAMEOVER';
                 setTimeout(() => this.resetGame(), 2000);
             }
             
-            if (this.dungeon.updatePath) {
+            if (this.dungeon.updatePath && this.player) {
                 this.dungeon.updatePath(this.player.position);
             }
         }
         
+        // Sempre renderiza a cena
         this.sceneManager.render();
     }
     
@@ -264,6 +436,17 @@ export class Game {
     resetGame() {
         this.state = 'MENU';
         this.ui.showMainMenu();
+        // Limpa o jogador para recriar no próximo jogo
+        if (this.player) {
+            this.player = null;
+        }
+        if (this.dungeon) {
+            this.dungeon = null;
+        }
+        if (this.combat) {
+            this.combat.clear();
+            this.combat = null;
+        }
     }
     
     pauseGame() {
@@ -298,5 +481,10 @@ export class Game {
         this.forestDungeon = null;
         this.moonDungeon = null;
         this.dungeon = null;
+        this.player = null;
+        if (this.combat) {
+            this.combat.clear();
+            this.combat = null;
+        }
     }
 }

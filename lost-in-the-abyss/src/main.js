@@ -1,8 +1,7 @@
-import './styles/main.css';
-import { Game } from './core/Game';
+// src/main.js
+import { Game } from './core/Game.js';
 
 // Inicializa o jogo quando a página carregar
-window.addEventListener('load', () => {
-    const game = new Game();
-    game.start();
+window.addEventListener('DOMContentLoaded', () => {
+    new Game();
 });

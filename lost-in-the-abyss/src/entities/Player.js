@@ -8,7 +8,8 @@ export class Player {
         this.position = new THREE.Vector3(0, GAME_CONFIG.PLAYER_HEIGHT, 0);
         this.velocity = new THREE.Vector3();
         this.speed = GAME_CONFIG.PLAYER_SPEED;
-        
+        this.direction = new THREE.Vector3(0, 0, -1);
+
         this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
         this.pitchSpeed = 0.002;
         this.yawSpeed = 0.002;
@@ -54,6 +55,15 @@ export class Player {
             }
         });
     }
+    // Adicione este método na classe Player (em src/entities/Player.js)
+
+// Adicione este método na classe Player (src/entities/Player.js)
+
+getDirection() {
+    const direction = new THREE.Vector3();
+    this.camera.getWorldDirection(direction);
+    return direction;
+}
     
     setPosition(x, y, z) {
         this.position.set(x, y, z);
@@ -70,66 +80,87 @@ export class Player {
         this.camera.position.z = this.position.z;
     }
     
-    update(deltaTime, keys, collisionCheck) {
-        if (this.energy > 0) {
-            this.energy = Math.max(0, this.energy - this.drainRate * deltaTime);
-            let intensity = 0.5 + (this.baseIntensity - 0.5) * this.energy;
-            intensity *= this.intensityMultiplier;
-            if (this.energy < 0.2) {
-                intensity *= 0.8 + 0.4 * Math.sin(Date.now() * 0.02);
-            }
-            this.flashlight.intensity = intensity;
-        } else {
-            this.flashlight.intensity = 0;
+    // src/entities/Player.js
+
+update(deltaTime, keys, collisionCheck) {
+    // Atualiza energia e intensidade da lanterna
+    if (this.energy > 0) {
+        this.energy = Math.max(0, this.energy - this.drainRate * deltaTime);
+        let intensity = 0.5 + (this.baseIntensity - 0.5) * this.energy;
+        intensity *= this.intensityMultiplier;
+        if (this.energy < 0.2) {
+            intensity *= 0.8 + 0.4 * Math.sin(Date.now() * 0.02);
         }
-        
-        const moveSpeed = this.speed * deltaTime;
-        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-        forward.y = 0;
-        forward.normalize();
-        
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
-        right.y = 0;
-        right.normalize();
-        
-        const moveDelta = new THREE.Vector3();
-        let moving = false;
-        if (keys['KeyW']) { moveDelta.add(forward); moving = true; }
-        if (keys['KeyS']) { moveDelta.sub(forward); moving = true; }
-        if (keys['KeyA']) { moveDelta.sub(right); moving = true; }
-        if (keys['KeyD']) { moveDelta.add(right); moving = true; }
-        
-        if (moveDelta.length() > 0) {
-            moveDelta.normalize();
-            moveDelta.multiplyScalar(moveSpeed);
-            if (!collisionCheck || !collisionCheck(moveDelta)) {
-                this.position.add(moveDelta);
-            }
-        }
-        
-        let bobY = 0;
-        if (this.bobEnabled && moving) {
-            this.isMoving = true;
-            this.bobTimer += deltaTime * this.bobSpeed;
-            bobY = Math.sin(this.bobTimer) * this.bobAmount;
-        } else {
-            this.isMoving = false;
-            this.bobTimer *= 0.9;
-            bobY = Math.sin(this.bobTimer) * this.bobAmount * 0.2;
-        }
-        
-        this.updateCameraPosition(bobY);
-        
-      
-        const offsetWorld = this.flashlightOffset.clone().applyQuaternion(this.camera.quaternion);
-        const lightPos = this.camera.position.clone().add(offsetWorld);
-        this.flashlight.position.copy(lightPos);
-        
-        const targetDir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-        const targetPos = this.camera.position.clone().add(targetDir.multiplyScalar(15));
-        this.flightlightTarget.position.copy(targetPos);
+        this.flashlight.intensity = intensity;
+    } else {
+        this.flashlight.intensity = 0;
     }
     
+    // Calcula movimento
+    const moveSpeed = this.speed * deltaTime;
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    forward.y = 0;
+    forward.normalize();
+    
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    right.y = 0;
+    right.normalize();
+    
+    const moveDelta = new THREE.Vector3();
+    let moving = false;
+    if (keys['KeyW']) { moveDelta.add(forward); moving = true; }
+    if (keys['KeyS']) { moveDelta.sub(forward); moving = true; }
+    if (keys['KeyA']) { moveDelta.sub(right); moving = true; }
+    if (keys['KeyD']) { moveDelta.add(right); moving = true; }
+    
+    if (moveDelta.length() > 0) {
+        moveDelta.normalize();
+        moveDelta.multiplyScalar(moveSpeed);
+        if (!collisionCheck || !collisionCheck(moveDelta)) {
+            this.position.add(moveDelta);
+        }
+    }
+    
+    // Head bob
+    let bobY = 0;
+    if (this.bobEnabled && moving) {
+        this.isMoving = true;
+        this.bobTimer += deltaTime * this.bobSpeed;
+        bobY = Math.sin(this.bobTimer) * this.bobAmount;
+    } else {
+        this.isMoving = false;
+        this.bobTimer *= 0.9;
+        bobY = Math.sin(this.bobTimer) * this.bobAmount * 0.2;
+    }
+    
+    this.updateCameraPosition(bobY);
+    
+    // Posiciona a lanterna
+    const offsetWorld = this.flashlightOffset.clone().applyQuaternion(this.camera.quaternion);
+    const lightPos = this.camera.position.clone().add(offsetWorld);
+    this.flashlight.position.copy(lightPos);
+    
+    const targetDir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    const targetPos = this.camera.position.clone().add(targetDir.multiplyScalar(15));
+    this.flightlightTarget.position.copy(targetPos);
+    
+    // ===== IMPORTANTE: Atualiza a direção do jogador para o sistema de combate =====
+    this.camera.getWorldDirection(this.direction);
+}
+
+recharge(amount, isCrystal = false) {
+    this.energy = Math.min(1.0, this.energy + amount);
+    if (isCrystal) {
+        this.intensityMultiplier += 0.1;
+        this.intensityMultiplier = Math.min(3.0, this.intensityMultiplier);
+        console.log(`Intensidade da lanterna: ${(this.intensityMultiplier * 100).toFixed(0)}%`);
+    }
+}
+
+// Método para obter a direção (usado pelo CombatSystem)
+getDirection() {
+    return this.direction.clone();
+}
     recharge(amount, isCrystal = false) {
         this.energy = Math.min(1.0, this.energy + amount);
         if (isCrystal) {
