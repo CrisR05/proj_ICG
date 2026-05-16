@@ -221,4 +221,21 @@ export class UIManager {
             }, duration);
         }
     }
+    showDamageFlash() {
+    // Cria um overlay vermelho temporário
+    const flash = document.createElement('div');
+    flash.style.position = 'fixed';
+    flash.style.top = 0;
+    flash.style.left = 0;
+    flash.style.width = '100%';
+    flash.style.height = '100%';
+    flash.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+    flash.style.pointerEvents = 'none';
+    flash.style.zIndex = '9999';
+    document.body.appendChild(flash);
+    
+    setTimeout(() => {
+        document.body.removeChild(flash);
+    }, 150);
+}
 }
