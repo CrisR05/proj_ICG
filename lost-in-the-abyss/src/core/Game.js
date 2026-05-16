@@ -14,7 +14,7 @@ export class Game {
     constructor() {
         this.timer = new THREE.Timer();
         this.timer.connect(document);
-        
+        this.mushrooms = [];
         this.state = 'MENU';
         this.totalLevels = 10;
         this.currentLevel = 1;
@@ -126,7 +126,8 @@ export class Game {
         
         const theme = this.themes[this.currentLevel - 1];
         this.sceneManager.applyTheme(theme);
-        
+        this.bossDefeated = false;  // <-- ADICIONE ESTA LINHA
+
         // Alternância: Nível 1 = Floresta, Nível 2 = Lua, Nível 3 = Masmorra, repete
         const levelType = (this.currentLevel - 1) % 3;
         
@@ -188,67 +189,92 @@ export class Game {
         this.ui.showMessage(`LEVEL ${this.currentLevel}`, 2000);
     }
     
-    spawnEnemiesForLevel(levelType) {
-        // Limpa inimigos anteriores
-        this.combat.clear();
+    // No método spawnEnemiesForLevel, mude para SPAWN APENAS 1 CHEFE
+spawnEnemiesForLevel(levelType) {
+    // Limpa inimigos anteriores
+    this.combat.clear();
+    
+    // Nível de dificuldade baseado no level atual
+    const levelMultiplier = 1 + (this.currentLevel - 1) * 0.15;
+    
+    if (levelType === 2) { // Masmorra - Stone Golem
+        console.log("👹 Spawning Stone Golem...");
+        import('../entities/StoneGolem.js').then(module => {
+            const StoneGolem = module.StoneGolem;
+            // Apenas UM golem, mais forte conforme o nível
+            const golem = new StoneGolem(0, 0);
+            // Aumenta stats baseado no nível
+            golem.maxHealth = Math.floor(100 * levelMultiplier);
+            golem.health = golem.maxHealth;
+            golem.attackDamage = Math.floor(15 * levelMultiplier);
+            golem.moveSpeed = 1.5 + (this.currentLevel - 1) * 0.1;
+            
+            this.sceneManager.scene.add(golem);
+            this.combat.addEnemy(golem);
+            this.ui.showMessage(`👹 STONE GOLEM (Lv.${Math.floor(levelMultiplier * 10)}) blocks the way!`, 3000);
+        }).catch(err => console.warn("StoneGolem error", err));
+    } 
+    else if (levelType === 0) { // Floresta - Forest Spirit
+    console.log("🌿 Spawning Forest Spirit...");
+    import('../entities/ForestSpirit.js').then(module => {
+        const ForestSpirit = module.ForestSpirit;
         
-        if (levelType === 2) { // Masmorra - Stone Golems
-            console.log("👹 Spawning Stone Golems...");
-            // Importa dinamicamente para evitar erros
-            import('../entities/StoneGolem.js').then(module => {
-                const StoneGolem = module.StoneGolem;
-                // Posições fixas para golems
-                const golemPositions = [
-                    { x: -8, z: -6 },
-                    { x: 7, z: -5 },
-                    { x: -4, z: 8 },
-                    { x: 5, z: 7 }
-                ];
-                golemPositions.forEach(pos => {
-                    const golem = new StoneGolem(pos.x, pos.z);
-                    this.sceneManager.scene.add(golem);
-                    this.combat.addEnemy(golem);
-                });
-                this.ui.showMessage("👹 Stone Golems detected! Find a pickaxe!", 3000);
-            }).catch(err => console.warn("StoneGolem not loaded yet", err));
-        } 
-        else if (levelType === 0) { // Floresta - Forest Spirits
-            console.log("🌿 Spawning Forest Spirits...");
-            import('../entities/ForestSpirit.js').then(module => {
-                const ForestSpirit = module.ForestSpirit;
-                const spiritPositions = [
-                    { x: -6, z: -5 },
-                    { x: 5, z: -4 },
-                    { x: -3, z: 7 },
-                    { x: 6, z: 6 }
-                ];
-                spiritPositions.forEach(pos => {
-                    const spirit = new ForestSpirit(pos.x, pos.z);
-                    this.sceneManager.scene.add(spirit);
-                    this.combat.addEnemy(spirit);
-                });
-                this.ui.showMessage("🌿 Forest Spirits nearby! Find purple mushrooms!", 3000);
-            }).catch(err => console.warn("ForestSpirit not loaded yet", err));
+        // ENCONTRA UMA POSIÇÃO DISTANTE DO JOGADOR
+        // O mapa da floresta tem tamanho variável, vamos usar uma posição fixa distante
+        // O spawn padrão do jogador é (0, 0), então vamos colocar o chefe longe
+        
+        let spawnX = 0, spawnZ = 0;
+        
+        // Tenta encontrar uma posição longe do centro
+        if (this.dungeon && this.dungeon.getWalls) {
+            // Procura uma parede/área distante - simplificado: usa coordenadas baseadas no tamanho do mapa
+            const theme = this.themes[this.currentLevel - 1];
+            const mapSize = theme.mapSize;
+            const offset = (mapSize * 4) / 2; // tileSize = 4
+            
+            // Posiciona num dos cantos opostos ao centro
+            const quadrants = [
+                { x: offset - 8, z: offset - 8 },   // canto inferior direito
+                { x: -offset + 8, z: offset - 8 },  // canto inferior esquerdo
+                { x: offset - 8, z: -offset + 8 },  // canto superior direito
+                { x: -offset + 8, z: -offset + 8 }  // canto superior esquerdo
+            ];
+            const chosen = quadrants[Math.floor(Math.random() * quadrants.length)];
+            spawnX = chosen.x;
+            spawnZ = chosen.z;
+        } else {
+            // Fallback: posição distante fixa
+            spawnX = 25;
+            spawnZ = 25;
         }
-        else if (levelType === 1) { // Lua - Moon Lurkers
-            console.log("👽 Spawning Moon Lurkers...");
-            import('../entities/MoonLurker.js').then(module => {
-                const MoonLurker = module.MoonLurker;
-                const lurkerPositions = [
-                    { x: -7, z: -4 },
-                    { x: 6, z: -6 },
-                    { x: -5, z: 8 },
-                    { x: 4, z: 5 }
-                ];
-                lurkerPositions.forEach(pos => {
-                    const lurker = new MoonLurker(pos.x, pos.z);
-                    this.sceneManager.scene.add(lurker);
-                    this.combat.addEnemy(lurker);
-                });
-                this.ui.showMessage("👽 Moon Lurkers detected! Find energy crystals!", 3000);
-            }).catch(err => console.warn("MoonLurker not loaded yet", err));
-        }
+        
+        const spirit = new ForestSpirit(spawnX, spawnZ, this.currentLevel);
+        spirit.maxHealth = Math.floor(80 * (1 + (this.currentLevel - 1) * 0.15));
+        spirit.health = spirit.maxHealth;
+        
+        this.sceneManager.scene.add(spirit);
+        this.combat.addEnemy(spirit);
+        this.ui.showMessage(`🌿 FOREST SPIRIT (Lv.${this.currentLevel}) haunts the forest!`, 3000);
+        this.ui.showMessage(`⚠️ Find 3 antidote mushrooms to weaken it!`, 4000);
+    }).catch(err => console.warn("ForestSpirit error", err));
+}
+    else if (levelType === 1) { // Lua - Moon Lurker
+        console.log("👽 Spawning Moon Lurker...");
+        import('../entities/MoonLurker.js').then(module => {
+            const MoonLurker = module.MoonLurker;
+            // Apenas UM lurker, mais forte
+            const lurker = new MoonLurker(0, 0);
+            lurker.maxHealth = Math.floor(90 * levelMultiplier);
+            lurker.health = lurker.maxHealth;
+            lurker.attackDamage = Math.floor(18 * levelMultiplier);
+            lurker.moveSpeed = 2.5;
+            
+            this.sceneManager.scene.add(lurker);
+            this.combat.addEnemy(lurker);
+            this.ui.showMessage(`👽 MOON LURKER (Lv.${Math.floor(levelMultiplier * 9)}) stalks the shadows!`, 3000);
+        }).catch(err => console.warn("MoonLurker error", err));
     }
+}
     
     spawnCollectablesForLevel(levelType) {
         if (levelType === 2) { // Masmorra - Picareta
@@ -270,31 +296,114 @@ export class Game {
                 }, 100);
             }).catch(err => console.warn("PickaxeItem not loaded yet", err));
         }
-        else if (levelType === 0) { // Floresta - Cogumelos Antídoto
-            import('../entities/CollectableItem.js').then(module => {
-                const AntidoteMushroom = module.AntidoteMushroom;
-                const mushroomPositions = [
-                    { x: -4, z: -3 }, { x: 3, z: -2 },
-                    { x: -2, z: 5 }, { x: 5, z: 4 },
-                    { x: -5, z: 2 }, { x: 2, z: -4 }
-                ];
-                mushroomPositions.forEach(pos => {
-                    const mushroom = new AntidoteMushroom(pos.x, pos.z);
-                    this.sceneManager.scene.add(mushroom);
-                    
-                    const checkMushroom = setInterval(() => {
-                        if (this.player && mushroom) {
-                            const dist = this.player.position.distanceTo(mushroom.position);
-                            if (dist < 2.0) {
-                                this.combat.collectAntidote(mushroom.position);
-                                this.sceneManager.scene.remove(mushroom);
-                                clearInterval(checkMushroom);
-                            }
-                        }
-                    }, 100);
-                });
-            }).catch(err => console.warn("AntidoteMushroom not loaded yet", err));
+      else if (levelType === 0) { // Floresta - Cogumelos Antídoto
+    import('../entities/CollectableItem.js').then(module => {
+        const AntidoteMushroom = module.AntidoteMushroom;
+        
+        // Limpa cogumelos anteriores
+        this.mushrooms = [];
+        
+        // POSIÇÕES MAIS PRÓXIMAS E VISÍVEIS (dentro do labirinto)
+        const mushroomPositions = [
+            // Posições próximas ao centro (fáceis de encontrar)
+            { x: -6, z: -5 }, 
+            { x: 7, z: -4 }, 
+            { x: -5, z: 8 }, 
+            { x: 6, z: 7 },
+            { x: -8, z: 3 }, 
+            { x: 4, z: -7 },
+            { x: -3, z: -8 }, 
+            { x: 9, z: 5 },
+            { x: -7, z: -7 }, 
+            { x: 8, z: 8 }
+        ];
+        
+        // Embaralha e pega 6
+        const shuffled = [...mushroomPositions];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
+        
+        const selectedPositions = shuffled.slice(0, 6);
+        
+        selectedPositions.forEach(pos => {
+            const mushroom = new AntidoteMushroom(pos.x, pos.z);
+            this.sceneManager.scene.add(mushroom);
+            this.mushrooms.push(mushroom);
+            
+            // LUZ TEMPORÁRIA PARA DESTAQUE (ajuda a ver)
+            const markerLight = new THREE.PointLight(0xff3300, 1.2, 6);
+            markerLight.position.set(pos.x, 1.5, pos.z);
+            this.sceneManager.scene.add(markerLight);
+            
+            // Remove a luz temporária após 3 segundos
+            setTimeout(() => {
+                if (markerLight.parent) this.sceneManager.scene.remove(markerLight);
+            }, 3000);
+            
+            // Loop de update do cogumelo
+            const updateMushroom = () => {
+                if (mushroom.update && !mushroom.collected && this.state === 'PLAYING') {
+                    mushroom.update(0.016);
+                    requestAnimationFrame(updateMushroom);
+                }
+            };
+            requestAnimationFrame(updateMushroom);
+            
+            // Verifica coleta
+            const checkMushroom = setInterval(() => {
+                if (this.player && mushroom && !mushroom.collected) {
+                    const dist = this.player.position.distanceTo(mushroom.position);
+                    if (dist < 2.5) {
+                        mushroom.collected = true;
+                        this.combat.collectAntidote(mushroom.position);
+                        this.sceneManager.scene.remove(mushroom);
+                        clearInterval(checkMushroom);
+                        
+                        const index = this.mushrooms.indexOf(mushroom);
+                        if (index > -1) this.mushrooms.splice(index, 1);
+                        
+                        const remaining = 3 - this.combat.antidotes;
+                        if (remaining > 0) {
+                            this.ui.showMessage(`🍄 ANTIDOTE! (${this.combat.antidotes}/3) ${remaining} more needed`, 2000);
+                        } else {
+                            this.ui.showMessage(`🍄 ALL ANTIDOTES COLLECTED! Spirit is now VULNERABLE!`, 3000);
+                        }
+                    }
+                }
+            }, 100);
+        });
+        
+        // PASSA OS COGUMELOS PARA A DUNGEON (para o caminho funcionar)
+        if (this.dungeon && this.dungeon.setMushrooms) {
+            this.dungeon.setMushrooms(this.mushrooms);
+        }
+        // Dentro de spawnCollectablesForLevel, após criar os cogumelos, adicione:
+console.log("🔴 VERIFICANDO COGUMELOS:");
+this.mushrooms.forEach((m, i) => {
+    console.log(`  Cogumelo ${i}: posição (${m.position.x}, ${m.position.z})`);
+    // Adiciona uma esfera vermelha gigante como marcador temporário
+    const debugSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.8, 8),
+        new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000 })
+    );
+    debugSphere.position.copy(m.position);
+    debugSphere.position.y = 2;
+    this.sceneManager.scene.add(debugSphere);
+    setTimeout(() => this.sceneManager.scene.remove(debugSphere), 5000);
+});
+        
+        this.ui.showMessage("🔴 Follow the RED PATH to find Antidote Mushrooms! (3 needed)", 5000);
+        
+        // LOG PARA DEBUG - ver onde estão os cogumelos
+        console.log("🍄 COGUMELOS SPAWNADOS:");
+        selectedPositions.forEach(pos => {
+            console.log(`   → x: ${pos.x}, z: ${pos.z}`);
+        });
+    }).catch(err => console.warn("AntidoteMushroom error", err));
+}
+
         else if (levelType === 1) { // Lua - Cristais de Energia
             import('../entities/CollectableItem.js').then(module => {
                 const EnergyCrystal = module.EnergyCrystal;
@@ -381,6 +490,18 @@ export class Game {
                     }
                 });
             }
+            // Verifica se o chefe foi derrotado para liberar os cristais/portal
+if (this.combat && this.combat.getEnemyCount() === 0 && !this.bossDefeated) {
+    this.bossDefeated = true;
+    this.ui.showMessage("✨ BOSS DEFEATED! Collect crystals to open the portal!", 4000);
+    
+    // Ativa os cristais (ou mostra onde estão)
+    // Se já tiver todos os cristais, ativa portal
+    if (this.crystalsCollected >= this.totalCrystals) {
+        const portal = this.dungeon.getPortal();
+        if (portal && portal.activate) portal.activate();
+    }
+}
             
             // Portal
             const portal = this.dungeon.getPortal();
@@ -416,11 +537,15 @@ export class Game {
             if (this.dungeon.updatePath && this.player) {
                 this.dungeon.updatePath(this.player.position);
             }
+            if (this.dungeon.updateMushroomPath && this.mushrooms && this.mushrooms.length > 0 && this.combat && this.combat.antidotes < 3) {
+    this.dungeon.updateMushroomPath(this.player.position, this.mushrooms);
+}
         }
         
         // Sempre renderiza a cena
         this.sceneManager.render();
     }
+    
     
     nextLevel() {
         this.currentLevel++;

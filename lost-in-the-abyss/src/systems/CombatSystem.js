@@ -56,12 +56,28 @@ export class CombatSystem {
         this.enemies = [];
     }
     
+    // No CombatSystem.js, substitua o método updateEnemies:
+
     updateEnemies(deltaTime, playerPosition) {
+        let totalDamage = 0;
+        
         this.enemies.forEach(enemy => {
             if (enemy.update) {
-                enemy.update(deltaTime, playerPosition);
+                const damage = enemy.update(deltaTime, playerPosition);
+                
+                // Se o inimigo está atacando, causa dano
+                if (enemy.isAttacking && damage === undefined) {
+                    totalDamage += enemy.attackDamage || 15;
+                    enemy.isAttacking = false;
+                } else if (typeof damage === 'number' && damage > 0) {
+                    totalDamage += damage;
+                }
             }
         });
+        
+        if (totalDamage > 0) {
+            this.damagePlayer(totalDamage);
+        }
     }
     
     update(deltaTime, input) {
@@ -150,6 +166,42 @@ export class CombatSystem {
             }
         }
     }
+    // Adicione este método à classe CombatSystem
+// Adicione este método
+damagePlayer(amount) {
+    if (this.player) {
+        // Reduz energia
+        this.player.energy = Math.max(0, this.player.energy - amount / 100);
+        this.ui.showMessage(`💔 TOOK ${amount} DAMAGE!`, 1000);
+        
+        // Efeito de dano na UI
+        if (this.ui.showDamageFlash) {
+            this.ui.showDamageFlash();
+        }
+    }
+}
+
+// Modifique o updateEnemies existente
+updateEnemies(deltaTime, playerPosition) {
+    let totalDamage = 0;
+    
+    this.enemies.forEach(enemy => {
+        if (enemy.update) {
+            const oldHealth = enemy.health;
+            const damage = enemy.update(deltaTime, playerPosition);
+            
+            // Se o inimigo está atacando, causa dano
+            if (enemy.isAttacking) {
+                totalDamage += enemy.attackDamage || 15;
+                enemy.isAttacking = false;
+            }
+        }
+    });
+    
+    if (totalDamage > 0) {
+        this.damagePlayer(totalDamage);
+    }
+}
     
     useAntidote() {
         if (this.antidotes <= 0) {

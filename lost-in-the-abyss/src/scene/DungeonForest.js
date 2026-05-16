@@ -13,6 +13,9 @@ export class DungeonForest {
         this.playerHeight = GAME_CONFIG.PLAYER_HEIGHT;
         this.textureLoader = new THREE.TextureLoader();
         
+        this.mushrooms = []; // <-- ADICIONE ESTA LINHA
+        this.showMushroomPath = true; // <-- ADICIONE ESTA LINHA
+
         this.walls = [];
         this.crystals = [];
         this.portal = null;
@@ -127,6 +130,10 @@ const { map, passages } = this.createOrganicMaze(size, theme.wallDensity);
         
         console.log(`🌲 Floresta orgânica: ${size}x${size}, ${this.walls.length} paredes, ${this.crystals.length} cristais`);
     }
+    setMushrooms(mushrooms) {
+    this.mushrooms = mushrooms;
+    console.log(`🍄 DungeonForest recebeu ${mushrooms.length} cogumelos para o caminho`);
+}
     
     // ===== PAREDES COM FISSURAS E LARGURAS VARIÁVEIS =====
     createOrganicWall(x, z, wallMaterial, mossMaterial) {
@@ -772,30 +779,36 @@ const { map, passages } = this.createOrganicMaze(size, theme.wallDensity);
     getCrystals() { return this.crystals; }
     getPortal() { return this.portal; }
     
-    updatePath(playerPosition) {
-        // Limpa caminho
-        while(this.pathGroup.children.length > 0) {
-            const child = this.pathGroup.children[0];
-            if (child.material) child.material.dispose();
-            if (child.geometry) child.geometry.dispose();
-            this.pathGroup.remove(child);
-        }
+  // Substitua o método updatePath existente no DungeonForest.js
+
+updatePath(playerPosition) {
+    // ===== CAMINHO PARA CRISTAIS (amarelo/laranja) =====
+    while(this.pathGroup.children.length > 0) {
+        const child = this.pathGroup.children[0];
+        if (child.material) child.material.dispose();
+        if (child.geometry) child.geometry.dispose();
+        this.pathGroup.remove(child);
+    }
+    
+    const availableCrystals = this.crystals.filter(c => !c.collected);
+    if (availableCrystals.length > 0) {
+        let nearestCrystal = null;
+        let minCrystalDist = Infinity;
         
-        const available = this.crystals.filter(c => !c.collected);
-        if (available.length === 0) return;
-        
-        let nearest = null, minDist = Infinity;
-        for (const crystal of available) {
+        for (const crystal of availableCrystals) {
             const dist = playerPosition.distanceTo(crystal.mesh.position);
-            if (dist < minDist) { minDist = dist; nearest = crystal; }
+            if (dist < minCrystalDist) {
+                minCrystalDist = dist;
+                nearestCrystal = crystal;
+            }
         }
         
-        if (nearest && minDist > 2) {
+        if (nearestCrystal && minCrystalDist > 2) {
             const start = playerPosition.clone();
-            const end = nearest.mesh.position.clone();
+            const end = nearestCrystal.mesh.position.clone();
             const material = new THREE.MeshStandardMaterial({ color: 0xffaa66, emissive: 0x442200 });
             
-            const steps = Math.floor(minDist / 0.5);
+            const steps = Math.floor(minCrystalDist / 0.5);
             for (let i = 0; i <= steps; i++) {
                 const t = i / steps;
                 const point = start.clone().lerp(end, t);
@@ -818,28 +831,35 @@ const { map, passages } = this.createOrganicMaze(size, theme.wallDensity);
                 }
             }
         }
-        
-        // Anima folhas
-        if (this.leafParticles) {
-            const positions = this.leafParticles.geometry.attributes.position.array;
-            for (let i = 0; i < positions.length / 3; i++) {
-                positions[i*3+1] -= 0.008;
-                if (positions[i*3+1] < 0) {
-                    positions[i*3+1] = 18;
-                    positions[i*3] = (Math.random() - 0.5) * 80;
-                    positions[i*3+2] = (Math.random() - 0.5) * 80;
-                }
-            }
-            this.leafParticles.geometry.attributes.position.needsUpdate = true;
-        }
-        
-        // Anima vaga-lumes
-        const time = Date.now() * 0.003;
-        this.fireflies.forEach((fly, idx) => {
-            const intensity = 0.2 + Math.sin(time * 2 + idx) * 0.15;
-            fly.intensity = intensity;
-        });
     }
+    
+    // ===== CAMINHO PARA COGUMELOS (vermelho) - SE AINDA PRECISAR DE ANTÍDOTOS =====
+    // Só mostra caminho para cogumelos se o espírito ainda não estiver vulnerável
+    if (this.showMushroomPath && this.mushrooms && this.mushrooms.length > 0) {
+        this.updateMushroomPath(playerPosition, this.mushrooms);
+    }
+    
+    // Anima folhas
+    if (this.leafParticles) {
+        const positions = this.leafParticles.geometry.attributes.position.array;
+        for (let i = 0; i < positions.length / 3; i++) {
+            positions[i*3+1] -= 0.008;
+            if (positions[i*3+1] < 0) {
+                positions[i*3+1] = 18;
+                positions[i*3] = (Math.random() - 0.5) * 80;
+                positions[i*3+2] = (Math.random() - 0.5) * 80;
+            }
+        }
+        this.leafParticles.geometry.attributes.position.needsUpdate = true;
+    }
+    
+    // Anima vaga-lumes
+    const time = Date.now() * 0.003;
+    this.fireflies.forEach((fly, idx) => {
+        const intensity = 0.2 + Math.sin(time * 2 + idx) * 0.15;
+        fly.intensity = intensity;
+    });
+}
     
     clear() {
         if (this.leafParticles) {
@@ -880,4 +900,102 @@ const { map, passages } = this.createOrganicMaze(size, theme.wallDensity);
         this.groundDetails = [];
         this.portal = null;
     }
+    // Adicione no DungeonForest.js, depois do método updatePath existente
+
+updateMushroomPath(playerPosition, mushrooms) {
+    // Limpa caminho dos cogumelos (usa greenPathGroup)
+    while(this.greenPathGroup.children.length > 0) {
+        const child = this.greenPathGroup.children[0];
+        if (child.material) child.material.dispose();
+        if (child.geometry) child.geometry.dispose();
+        this.greenPathGroup.remove(child);
+    }
+    
+    if (!mushrooms || mushrooms.length === 0) return;
+    
+    // Filtra cogumelos não coletados
+    const availableMushrooms = mushrooms.filter(m => m && !m.collected);
+    if (availableMushrooms.length === 0) return;
+    
+    // Encontra o cogumelo mais próximo
+    let nearest = null;
+    let minDist = Infinity;
+    
+    for (const mushroom of availableMushrooms) {
+        if (mushroom.position) {
+            const dist = playerPosition.distanceTo(mushroom.position);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = mushroom;
+            }
+        }
+    }
+    
+    // Se estiver muito perto (< 3 unidades), não mostra caminho
+    if (nearest && minDist > 3) {
+        const start = playerPosition.clone();
+        const end = nearest.position.clone();
+        
+        // Material VERMELHO para cogumelos (diferente do amarelo dos cristais)
+        const material = new THREE.MeshStandardMaterial({ 
+            color: 0xff3366, 
+            emissive: 0xff2200,
+            emissiveIntensity: 0.8,
+            transparent: true,
+            opacity: 0.7
+        });
+        
+        const steps = Math.floor(minDist / 0.5);
+        const stepSize = minDist / steps;
+        
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const point = start.clone().lerp(end, t);
+            point.y = 0.15; // Altura do caminho
+            
+            const prev = start.clone().lerp(end, (i-1)/steps);
+            prev.y = 0.15;
+            
+            const dir = new THREE.Vector3().subVectors(point, prev);
+            const length = dir.length();
+            
+            if (length > 0.05) {
+                // Cria cilindro como "migalha" do caminho
+                const cylinder = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, 0.1, length, 6),
+                    material
+                );
+                cylinder.position.copy(prev.clone().add(point).multiplyScalar(0.5));
+                cylinder.quaternion.setFromUnitVectors(
+                    new THREE.Vector3(0, 1, 0),
+                    dir.clone().normalize()
+                );
+                cylinder.castShadow = false;
+                this.greenPathGroup.add(cylinder);
+            }
+        }
+        
+        // Adiciona um marcador pulsante no final (no cogumelo)
+        const markerMat = new THREE.MeshStandardMaterial({ 
+            color: 0xff4444, 
+            emissive: 0xff2200,
+            emissiveIntensity: 1.0
+        });
+        const marker = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8), markerMat);
+        marker.position.copy(end);
+        marker.position.y = 0.8;
+        this.greenPathGroup.add(marker);
+        
+        // Anima o marcador
+        const animateMarker = () => {
+            if (marker.parent && this.greenPathGroup.children.includes(marker)) {
+                const pulse = 0.8 + Math.sin(Date.now() * 0.015) * 0.4;
+                marker.scale.set(pulse, pulse, pulse);
+                if (marker.material) marker.material.emissiveIntensity = 0.5 + Math.sin(Date.now() * 0.02) * 0.5;
+                requestAnimationFrame(animateMarker);
+            }
+        };
+        requestAnimationFrame(animateMarker);
+    }
+}
 }
